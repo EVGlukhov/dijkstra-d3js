@@ -14,7 +14,7 @@ const graph: Record<string, Record<string, number>> = {
 
           start
         /     |
-    5 /       \ 2
+    5 /       \2
     /         \
   A --------- B
   | \    8    |
