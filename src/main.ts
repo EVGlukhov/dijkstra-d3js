@@ -108,6 +108,7 @@ const links: Link[] = Object.entries(graph).flatMap(([source, neighbors]) =>
     weight,
   })),
 );
+let selectedId: string | null = null;
 
 const svg = select("#app")
   .append("svg")
@@ -115,21 +116,28 @@ const svg = select("#app")
   .attr("width", "100%")
   .attr("height", 500);
 
+const graphGroup = svg
+  .append("g")
+  .attr(
+    "transform",
+    "translate(250, 150) rotate(30) scale(1.5) translate(-250, -150)",
+  );
+
 // Add an arrowhead so the directed edges are clear.
 svg
   .append("defs")
   .append("marker")
   .attr("id", "arrow")
   .attr("viewBox", "0 -5 10 10")
-  .attr("refX", 26)
-  .attr("markerWidth", 6)
-  .attr("markerHeight", 6)
+  .attr("refX", 23)
+  .attr("markerWidth", 10)
+  .attr("markerHeight", 10)
   .attr("orient", "auto")
   .append("path")
   .attr("d", "M0,-5L10,0L0,5")
   .attr("fill", "#888");
 
-const edgeLines = svg
+const edgeLines = graphGroup
   .append("g")
   .selectAll<SVGLineElement, Link>("line")
   .data(links)
@@ -137,27 +145,47 @@ const edgeLines = svg
   .attr("stroke", "#888")
   .attr("marker-end", "url(#arrow)");
 
-const edgeWeights = svg
+const edgeWeights = graphGroup
   .append("g")
   .selectAll<SVGTextElement, Link>("text")
   .data(links)
   .join("text")
   .text((link) => link.weight)
+  .attr("font-size", 12)
   .attr("text-anchor", "middle");
 
-const nodeGroups = svg
+const nodeGroups = graphGroup
   .append("g")
   .selectAll<SVGElement, Node>("g")
   .data(nodes)
   .join("g");
 
-nodeGroups.append("circle").attr("r", 10).attr("fill", "steelblue");
+nodeGroups
+  .append("circle")
+  .attr("r", 14)
+  .attr("fill", "steelblue")
+  .style("cursor", "pointer");
+
 nodeGroups
   .append("text")
   .text((node) => node.id)
   .attr("text-anchor", "middle")
+  .attr("font-size", 12)
   .attr("dy", 4)
-  .attr("fill", "white");
+  .attr("fill", "white")
+  .style("cursor", "pointer");
+
+nodeGroups.on("click", (event, node) => {
+  event.stopPropagation();
+
+  // Toggle off when the currently selected vertex is clicked again.
+  selectedId = selectedId === node.id ? null : node.id;
+
+  nodeGroups
+    .classed("selected", (d) => d.id === selectedId)
+    .select("circle")
+    .attr("fill", (d) => (d.id === selectedId ? "red" : "steelblue"));
+});
 
 // D3 replaces link source/target IDs with node objects during simulation.
 const nodeById = new Map(nodes.map((node) => [node.id, node]));
@@ -170,8 +198,8 @@ forceSimulation(nodes)
     "link",
     forceLink<Node, Link>(links).id((node) => node.id),
   )
-  .force("charge", forceManyBody().strength(-300))
-  .force("center", forceCenter(400, 250))
+  .force("charge", forceManyBody().strength(-500))
+  .force("center", forceCenter(400, 150))
   .on("tick", () => {
     edgeLines
       .attr("x1", (link) => getNode(link.source).x ?? 0)
