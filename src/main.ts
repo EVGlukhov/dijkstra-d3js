@@ -175,16 +175,30 @@ nodeGroups
   .attr("fill", "white")
   .style("cursor", "pointer");
 
+let selectedStart: string | null = null;
+let selectedEnd: string | null = null;
+
 nodeGroups.on("click", (event, node) => {
   event.stopPropagation();
 
-  // Toggle off when the currently selected vertex is clicked again.
-  selectedId = selectedId === node.id ? null : node.id;
+  // Start a new selection after both vertices have been chosen.
+  if (selectedStart === null || selectedEnd !== null) {
+    selectedStart = node.id;
+    selectedEnd = null;
+  } else if (node.id !== selectedStart) {
+    selectedEnd = node.id;
 
-  nodeGroups
-    .classed("selected", (d) => d.id === selectedId)
-    .select("circle")
-    .attr("fill", (d) => (d.id === selectedId ? "red" : "steelblue"));
+    // Run Dijkstra once both endpoints are selected.
+    const path = dijkstra(graph, selectedStart, selectedEnd);
+    console.log(`Shortest path from ${selectedStart} to ${selectedEnd}:`, path);
+  }
+
+  nodeGroups.select("circle").attr("fill", (d) => {
+    if (d.id === selectedStart) return "green";
+    if (d.id === selectedEnd) return "red";
+
+    return "steelblue";
+  });
 });
 
 // D3 replaces link source/target IDs with node objects during simulation.
