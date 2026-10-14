@@ -1,4 +1,5 @@
-const graph: Record<string, Record<string, number>> = {
+type DirectedGraph = Record<string, Record<string, number>>;
+const graph: DirectedGraph = {
   start: { A: 5, B: 2 },
   A: { C: 4, D: 2 },
   B: { A: 8, D: 7 },
@@ -30,3 +31,7 @@ const graph: Record<string, Record<string, number>> = {
   \      /
     end
 */
+
+function dijkstra(graph: DirectedGraph, start: string, end: string) {}
+
+dijkstra(graph, "start", "end");
