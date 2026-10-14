@@ -1,4 +1,3 @@
-import { link } from "d3";
 import {
   forceCenter,
   forceLink,
@@ -109,7 +108,6 @@ const links: Link[] = Object.entries(graph).flatMap(([source, neighbors]) =>
     weight,
   })),
 );
-let selectedId: string | null = null;
 
 const svg = select("#app")
   .append("svg")
