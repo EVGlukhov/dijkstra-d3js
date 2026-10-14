@@ -1,3 +1,4 @@
+import { link } from "d3";
 import {
   forceCenter,
   forceLink,
@@ -183,6 +184,8 @@ nodeGroups.on("click", (event, node) => {
 
   // Start a new selection after both vertices have been chosen.
   if (selectedStart === null || selectedEnd !== null) {
+    // Restore every edge before choosing a new pair.
+    edgeLines.attr("stroke", "#888").attr("stroke-width", 1);
     selectedStart = node.id;
     selectedEnd = null;
   } else if (node.id !== selectedStart) {
@@ -190,7 +193,16 @@ nodeGroups.on("click", (event, node) => {
 
     // Run Dijkstra once both endpoints are selected.
     const path = dijkstra(graph, selectedStart, selectedEnd);
-    console.log(`Shortest path from ${selectedStart} to ${selectedEnd}:`, path);
+    const pathEdges = new Set(
+      path.slice(1).map((vertex, i) => `${path[i]}->${vertex}`),
+    );
+
+    // Highlight path edges; dim the rest.
+    edgeLines.attr("stroke", (link) =>
+      pathEdges.has(`${getNode(link.source).id}->${getNode(link.target).id}`)
+        ? "orange"
+        : "#888",
+    );
   }
 
   nodeGroups.select("circle").attr("fill", (d) => {
