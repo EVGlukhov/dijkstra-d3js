@@ -1,3 +1,13 @@
+import {
+  forceCenter,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  type SimulationLinkDatum,
+  type SimulationNodeDatum,
+} from "d3-force";
+import { select } from "d3-selection";
+
 type DirectedGraph = Record<string, Record<string, number>>;
 
 const graph: DirectedGraph = {
@@ -78,3 +88,111 @@ function dijkstra(graph: DirectedGraph, start: string, end: string) {
 }
 
 console.log(dijkstra(graph, "start", "end"));
+
+interface Node extends SimulationNodeDatum {
+  id: string;
+}
+
+interface Link extends SimulationLinkDatum<Node> {
+  source: string | Node;
+  target: string | Node;
+  weight: number;
+}
+
+// Turn the adjacency list into D3 nodes and weighted links.
+const nodes: Node[] = Object.keys(graph).map((id) => ({ id }));
+const links: Link[] = Object.entries(graph).flatMap(([source, neighbors]) =>
+  Object.entries(neighbors).map(([target, weight]) => ({
+    source,
+    target,
+    weight,
+  })),
+);
+
+const svg = select("#app")
+  .append("svg")
+  .attr("viewBox", "0 0 800 500")
+  .attr("width", "100%")
+  .attr("height", 500);
+
+// Add an arrowhead so the directed edges are clear.
+svg
+  .append("defs")
+  .append("marker")
+  .attr("id", "arrow")
+  .attr("viewBox", "0 -5 10 10")
+  .attr("refX", 26)
+  .attr("markerWidth", 6)
+  .attr("markerHeight", 6)
+  .attr("orient", "auto")
+  .append("path")
+  .attr("d", "M0,-5L10,0L0,5")
+  .attr("fill", "#888");
+
+const edgeLines = svg
+  .append("g")
+  .selectAll<SVGLineElement, Link>("line")
+  .data(links)
+  .join("line")
+  .attr("stroke", "#888")
+  .attr("marker-end", "url(#arrow)");
+
+const edgeWeights = svg
+  .append("g")
+  .selectAll<SVGTextElement, Link>("text")
+  .data(links)
+  .join("text")
+  .text((link) => link.weight)
+  .attr("text-anchor", "middle");
+
+const nodeGroups = svg
+  .append("g")
+  .selectAll<SVGElement, Node>("g")
+  .data(nodes)
+  .join("g");
+
+nodeGroups.append("circle").attr("r", 10).attr("fill", "steelblue");
+nodeGroups
+  .append("text")
+  .text((node) => node.id)
+  .attr("text-anchor", "middle")
+  .attr("dy", 4)
+  .attr("fill", "white");
+
+// D3 replaces link source/target IDs with node objects during simulation.
+const nodeById = new Map(nodes.map((node) => [node.id, node]));
+const getNode = (endpoint: string | Node): Node =>
+  typeof endpoint === "string" ? nodeById.get(endpoint)! : endpoint;
+
+// Calculate node positions, then update the SVG elements on each tick.
+forceSimulation(nodes)
+  .force(
+    "link",
+    forceLink<Node, Link>(links).id((node) => node.id),
+  )
+  .force("charge", forceManyBody().strength(-300))
+  .force("center", forceCenter(400, 250))
+  .on("tick", () => {
+    edgeLines
+      .attr("x1", (link) => getNode(link.source).x ?? 0)
+      .attr("y1", (link) => getNode(link.source).y ?? 0)
+      .attr("x2", (link) => getNode(link.target).x ?? 0)
+      .attr("y2", (link) => getNode(link.target).y ?? 0);
+
+    edgeWeights
+      .attr(
+        "x",
+        (link) =>
+          ((getNode(link.source).x ?? 0) + (getNode(link.target).x ?? 0)) / 2,
+      )
+      .attr(
+        "y",
+        (link) =>
+          ((getNode(link.source).y ?? 0) + (getNode(link.target).y ?? 0)) / 2,
+      );
+
+    nodeGroups.attr(
+      "transform",
+      (node) => `translate(${node.x ?? 0}, ${node.y ?? 0})`,
+    );
+  });
